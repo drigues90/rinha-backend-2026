@@ -1,5 +1,5 @@
 {
-  "name": "codespaces-blank",
+  "name": "rinha-backend-2026",
   "version": "1.0.0",
   "description": "Express API baseline with in-memory state",
   "main": "src/server.js",
