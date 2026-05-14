@@ -20,14 +20,14 @@ docker compose up --build
 
 The API will be available at:
 
-- `http://localhost:9999/health`
+- `http://localhost:9999/ready`
 
 ## Validate balancing
 
 Run multiple requests and check the `instance` field is distributed between `api-1` and `api-2` over time.
 
 ```bash
-for i in $(seq 1 6); do curl -s http://localhost:9999/health; echo; done
+for i in $(seq 1 6); do curl -s http://localhost:9999/ready; echo; done
 ```
 
 Expected shape:
