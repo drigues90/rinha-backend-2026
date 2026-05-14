@@ -13,3 +13,5 @@
 - **2026-05-14:** Added V1 `POST /fraud-score` route returning a fixed `{ approved: false, fraud_score: 1.0 }` response to match the new contract.
 - **2026-05-14:** Added fraud-score pipeline placeholders: vector mapping stub, nearest-neighbor lookup hook, and score stub with top-k interface.
 - **2026-05-14:** Implemented 14-feature fraud-score vector mapping with deterministic numeric conversions and a time-delta feature.
+- **2026-05-14:** Implemented the updated 14D fraud vector formula with UTC time parts, MCC risk lookup, unknown-merchant flag, and normalization placeholders.
+- **2026-05-14:** Applied concrete normalization constants for the fraud-score feature vector limits.
