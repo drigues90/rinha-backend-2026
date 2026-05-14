@@ -27,6 +27,16 @@
 **What:** Established the minimum automated test contract for V1. Test file: `src/__tests__/health.test.js` with Jest + Supertest. Seven core assertions: (1) `GET /health` → 200, (2) Content-Type is `application/json`, (3) body contains `{ status: 'ok' }`, (4) `POST /health` → 404/405, (5) `PUT /health` → 404/405, (6) unknown routes → 404, (7) extra headers → 200. App export pattern: `src/app.js` exports without `listen()`, `src/server.js` calls `listen()` for Supertest compatibility.
 **Why:** Greenfield API without baseline tests is a trust gap. Clear expectations before implementation ensure Ripley has acceptance criteria for the first merge.
 
+### 2026-05-14T00:00:00.000+00:00: Local Docker + Nginx load balancer baseline
+**By:** Hicks
+**What:** Standardized local runtime with Docker Compose using `api-1` and `api-2` from the same app image behind `nginx` on host port `9999`, with round-robin upstream and `/health` returning an `instance` identifier for verification.
+**Why:** Reproducible local infra that mirrors a production-style reverse-proxy topology while keeping bootstrap to a single command.
+
+### 2026-05-14T00:00:00.000+00:00: Startup readiness gating and upstream hardening for local topology
+**By:** Vasquez
+**What:** Added API healthchecks and `depends_on` health conditions to gate `nginx` startup, introduced upstream fail parameters (`max_fails`/`fail_timeout`) in Nginx, and updated docs to validate distribution over time instead of strict alternation.
+**Why:** Prevent transient startup `502` behavior and align validation guidance with real round-robin behavior.
+
 ## Governance
 
 - All meaningful changes require team consensus

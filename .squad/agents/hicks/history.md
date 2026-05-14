@@ -10,3 +10,10 @@
 
 - Squad initialized with the Alien cast for this repository.
 - I own tooling, environment setup, automation, and CI foundations.
+- Added a local Docker topology with Nginx on host port 9999 and two API instances in round robin.
+- Exposing an instance identifier in `/health` makes LB validation objective without extra observability tooling.
+- Kept runtime minimal: single app image reused by both API services, static Nginx config mounted read-only.
+
+## Cross-Agent Updates
+
+- **2026-05-14T00:00:00.000+00:00 (Scribe):** Docker LB baseline decision merged into canonical `.squad/decisions.md`; inbox processed and cleared for Hicks item.

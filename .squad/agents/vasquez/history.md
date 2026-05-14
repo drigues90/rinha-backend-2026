@@ -19,3 +19,5 @@
 ## Cross-Agent Updates
 
 - **2026-05-13T20:30:14.118+00:00 (Scribe):** V1 test contract decision merged to `.squad/decisions.md`. Orchestration log written. Team is ready for Bishop (Backend Dev) implementation phase. Ripley baseline is canonical.
+- **2026-05-14T00:00:00.000+00:00:** Reviewer pass on Hicks docker topology found startup race: `nginx` could come up before API readiness and serve transient 502s. Corrective action applied: API healthchecks + `depends_on.condition: service_healthy` + upstream fail parameters in Nginx. README now documents distribution (not strict alternation) for round-robin validation.
+- **2026-05-14T00:00:00.000+00:00 (Scribe):** Docker validation/hardening decision merged into canonical `.squad/decisions.md`; inbox processed and cleared for Vasquez item.
