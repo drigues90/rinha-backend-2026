@@ -13,6 +13,7 @@
 - Added a local Docker topology with Nginx on host port 9999 and two API instances in round robin.
 - Exposing an instance identifier in `/health` makes LB validation objective without extra observability tooling.
 - Kept runtime minimal: single app image reused by both API services, static Nginx config mounted read-only.
+- Updated local Compose limits to approximate a shared 1 CPU / 350MB cap across all services, since Compose lacks a true global limit.
 
 ## Cross-Agent Updates
 
