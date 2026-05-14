@@ -15,3 +15,5 @@
 - **2026-05-14:** Implemented 14-feature fraud-score vector mapping with deterministic numeric conversions and a time-delta feature.
 - **2026-05-14:** Implemented the updated 14D fraud vector formula with UTC time parts, MCC risk lookup, unknown-merchant flag, and normalization placeholders.
 - **2026-05-14:** Applied concrete normalization constants for the fraud-score feature vector limits.
+- **2026-05-14:** Wired `/fraud-score` to load example reference vectors, run top-5 nearest neighbors, and score approval from fraud label ratios.
+- **2026-05-14:** Reordered the fraud feature vector to the specified formula, including UTC Monday-based day-of-week mapping and last-transaction fallbacks.

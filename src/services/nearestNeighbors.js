@@ -26,6 +26,29 @@ function similarityStub(vectorA, vectorB) {
   return 0;
 }
 
+function euclideanSimilarity(vectorA, vectorB) {
+  if (!Array.isArray(vectorA) || !Array.isArray(vectorB)) {
+    return 0;
+  }
+  if (vectorA.length !== vectorB.length) {
+    return 0;
+  }
+
+  let sum = 0;
+  for (let i = 0; i < vectorA.length; i += 1) {
+    const a = Number(vectorA[i]);
+    const b = Number(vectorB[i]);
+    if (!Number.isFinite(a) || !Number.isFinite(b)) {
+      return 0;
+    }
+    const diff = a - b;
+    sum += diff * diff;
+  }
+
+  const distance = Math.sqrt(sum);
+  return 1 / (1 + distance);
+}
+
 function normalizeTopK(value) {
   return Number.isInteger(value) && value > 0 ? value : DEFAULT_TOP_K;
 }
@@ -56,5 +79,6 @@ module.exports = {
   DEFAULT_TOP_K,
   placeholderDataset,
   similarityStub,
+  euclideanSimilarity,
   getNearestNeighbors,
 };

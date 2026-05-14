@@ -4,12 +4,17 @@ const path = require('path');
 const {
   DEFAULT_TOP_K,
   getNearestNeighbors,
+  euclideanSimilarity,
   placeholderDataset
 } = require('../../services/nearestNeighbors');
 
 const fraudScoreRouter = express.Router();
 
 const MCC_RISK_PATH = path.join(__dirname, '../../data/mcc_risk.json');
+const EXAMPLE_REFERENCES_PATH = path.join(
+  __dirname,
+  '../../example-references.json'
+);
 // MCC risk lookup defaults to 0.5 when the MCC is missing.
 
 // Normalization limits for the fraud vector.
@@ -24,6 +29,7 @@ const VECTOR_LIMITS = {
 };
 
 let cachedMccRiskMap = null;
+let cachedExampleReferences = null;
 
 function safeNumber(value) {
   const numeric = Number(value);
@@ -93,6 +99,59 @@ function getMccRiskMap() {
   return cachedMccRiskMap;
 }
 
+function loadExampleReferences() {
+  if (cachedExampleReferences) {
+    return cachedExampleReferences;
+  }
+
+  try {
+    const raw = fs.readFileSync(EXAMPLE_REFERENCES_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    cachedExampleReferences = Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    cachedExampleReferences = [];
+  }
+
+  return cachedExampleReferences;
+}
+
+function sanitizeVector(vector, expectedLength) {
+  if (!Array.isArray(vector)) {
+    return null;
+  }
+  if (Number.isInteger(expectedLength) && vector.length !== expectedLength) {
+    return null;
+  }
+
+  const numeric = vector.map((value) => Number(value));
+  const allFinite = numeric.every((value) => Number.isFinite(value));
+  return allFinite ? numeric : null;
+}
+
+function buildReferenceDataset(queryVector) {
+  const expectedLength = Array.isArray(queryVector) ? queryVector.length : null;
+  const raw = loadExampleReferences();
+
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return [];
+  }
+
+  return raw
+    .map((item, index) => {
+      const vector = sanitizeVector(item && item.vector, expectedLength);
+      if (!vector) {
+        return null;
+      }
+      const label = typeof item.label === 'string' ? item.label : '';
+      return {
+        id: item && item.id ? item.id : `ref-${index + 1}`,
+        vector,
+        label
+      };
+    })
+    .filter(Boolean);
+}
+
 function getUtcTimeParts(value) {
   const epochMillis = toEpochMillis(value);
   if (!epochMillis) {
@@ -100,9 +159,10 @@ function getUtcTimeParts(value) {
   }
 
   const date = new Date(epochMillis);
+  const utcDay = date.getUTCDay();
   return {
     hour: date.getUTCHours(),
-    dayOfWeek: date.getUTCDay()
+    dayOfWeek: (utcDay + 6) % 7
   };
 }
 
@@ -152,40 +212,52 @@ function buildFeatureVector(payload) {
     normalizeValue(transaction.amount, VECTOR_LIMITS.maxAmount),
     normalizeValue(transaction.installments, VECTOR_LIMITS.maxInstallments),
     normalizeValue(amountVsAvgRatio, VECTOR_LIMITS.maxAmountVsAvgRatio),
-    normalizeValue(customer.tx_count_24h, VECTOR_LIMITS.maxTxCount24h),
-    unknownMerchant,
-    clamp(mccRisk, 0, 1),
-    normalizeValue(merchant.avg_amount, VECTOR_LIMITS.maxMerchantAvgAmount),
-    toBooleanNumber(terminal.is_online),
-    toBooleanNumber(terminal.card_present),
-    normalizeValue(terminal.km_from_home, VECTOR_LIMITS.maxKm),
-    normalizeValue(
-      hasLastTransaction ? lastTransaction.km_from_current : 0,
-      VECTOR_LIMITS.maxKm
-    ),
+    normalizeValue(requestedAtHourUtc, 23),
+    normalizeValue(requestedAtDayUtc, 6),
     minutesSinceLastTx === -1
       ? -1
       : normalizeValue(minutesSinceLastTx, VECTOR_LIMITS.maxMinutes),
-    normalizeValue(requestedAtHourUtc, 23),
-    normalizeValue(requestedAtDayUtc, 6)
+    hasLastTransaction
+      ? normalizeValue(lastTransaction.km_from_current, VECTOR_LIMITS.maxKm)
+      : -1,
+    normalizeValue(terminal.km_from_home, VECTOR_LIMITS.maxKm),
+    normalizeValue(customer.tx_count_24h, VECTOR_LIMITS.maxTxCount24h),
+    toBooleanNumber(terminal.is_online),
+    toBooleanNumber(terminal.card_present),
+    unknownMerchant,
+    clamp(mccRisk, 0, 1),
+    normalizeValue(merchant.avg_amount, VECTOR_LIMITS.maxMerchantAvgAmount)
   ];
 }
 
-function computeFraudScore(_payload, _vector, _neighbors) {
-  // TODO: Replace with real scoring rule once defined.
-  return 1.0;
+function computeFraudScore(neighbors, topK) {
+  const total = Number.isInteger(topK) && topK > 0 ? topK : DEFAULT_TOP_K;
+  if (!Array.isArray(neighbors) || total === 0) {
+    return 0;
+  }
+
+  const fraudCount = neighbors.reduce((count, neighbor) => {
+    return neighbor && neighbor.label === 'fraud' ? count + 1 : count;
+  }, 0);
+
+  return fraudCount / total;
 }
 
 fraudScoreRouter.post('/fraud-score', (request, response) => {
   const payload = request.body || {};
   const vector = buildFeatureVector(payload);
-  const neighbors = getNearestNeighbors(vector, placeholderDataset, {
-    topK: DEFAULT_TOP_K
+  const referenceDataset = buildReferenceDataset(vector);
+  const dataset = referenceDataset.length ? referenceDataset : placeholderDataset;
+  const topK = DEFAULT_TOP_K;
+  const neighbors = getNearestNeighbors(vector, dataset, {
+    topK,
+    similarity: euclideanSimilarity
   });
-  const fraudScore = computeFraudScore(payload, vector, neighbors);
+  const fraudScore = computeFraudScore(neighbors, topK);
+  const approved = fraudScore < 0.6;
 
   response.status(200).json({
-    approved: false,
+    approved,
     fraud_score: fraudScore
   });
 });
