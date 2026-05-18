@@ -2,19 +2,13 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const {
-  DEFAULT_TOP_K,
-  getNearestNeighbors,
-  euclideanSimilarity,
-  placeholderDataset
-} = require('../../services/nearestNeighbors');
+  queryNearestNeighbors,
+  VECTOR_DIMENSIONS
+} = require('../../services/lanceDb');
 
 const fraudScoreRouter = express.Router();
 
 const MCC_RISK_PATH = path.join(__dirname, '../../data/mcc_risk.json');
-const EXAMPLE_REFERENCES_PATH = path.join(
-  __dirname,
-  '../../example-references.json'
-);
 // MCC risk lookup defaults to 0.5 when the MCC is missing.
 
 // Normalization limits for the fraud vector.
@@ -29,7 +23,7 @@ const VECTOR_LIMITS = {
 };
 
 let cachedMccRiskMap = null;
-let cachedExampleReferences = null;
+const DEFAULT_TOP_K = 5;
 
 function safeNumber(value) {
   const numeric = Number(value);
@@ -99,57 +93,13 @@ function getMccRiskMap() {
   return cachedMccRiskMap;
 }
 
-function loadExampleReferences() {
-  if (cachedExampleReferences) {
-    return cachedExampleReferences;
-  }
-
-  try {
-    const raw = fs.readFileSync(EXAMPLE_REFERENCES_PATH, 'utf8');
-    const parsed = JSON.parse(raw);
-    cachedExampleReferences = Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    cachedExampleReferences = [];
-  }
-
-  return cachedExampleReferences;
-}
-
-function sanitizeVector(vector, expectedLength) {
+function validateVectorDimensions(vector) {
   if (!Array.isArray(vector)) {
-    return null;
+    throw new Error('Feature vector must be an array');
   }
-  if (Number.isInteger(expectedLength) && vector.length !== expectedLength) {
-    return null;
+  if (vector.length !== VECTOR_DIMENSIONS) {
+    throw new Error('Feature vector length mismatch');
   }
-
-  const numeric = vector.map((value) => Number(value));
-  const allFinite = numeric.every((value) => Number.isFinite(value));
-  return allFinite ? numeric : null;
-}
-
-function buildReferenceDataset(queryVector) {
-  const expectedLength = Array.isArray(queryVector) ? queryVector.length : null;
-  const raw = loadExampleReferences();
-
-  if (!Array.isArray(raw) || raw.length === 0) {
-    return [];
-  }
-
-  return raw
-    .map((item, index) => {
-      const vector = sanitizeVector(item && item.vector, expectedLength);
-      if (!vector) {
-        return null;
-      }
-      const label = typeof item.label === 'string' ? item.label : '';
-      return {
-        id: item && item.id ? item.id : `ref-${index + 1}`,
-        vector,
-        label
-      };
-    })
-    .filter(Boolean);
 }
 
 function getUtcTimeParts(value) {
@@ -243,23 +193,26 @@ function computeFraudScore(neighbors, topK) {
   return fraudCount / total;
 }
 
-fraudScoreRouter.post('/fraud-score', (request, response) => {
-  const payload = request.body || {};
-  const vector = buildFeatureVector(payload);
-  const referenceDataset = buildReferenceDataset(vector);
-  const dataset = referenceDataset.length ? referenceDataset : placeholderDataset;
-  const topK = DEFAULT_TOP_K;
-  const neighbors = getNearestNeighbors(vector, dataset, {
-    topK,
-    similarity: euclideanSimilarity
-  });
-  const fraudScore = computeFraudScore(neighbors, topK);
-  const approved = fraudScore < 0.6;
+fraudScoreRouter.post('/fraud-score', async (request, response) => {
+  try {
+    const payload = request.body || {};
+    const vector = buildFeatureVector(payload);
+    validateVectorDimensions(vector);
+    const topK = DEFAULT_TOP_K;
+    const neighbors = await queryNearestNeighbors(vector, topK);
+    const fraudScore = computeFraudScore(neighbors, topK);
+    const approved = fraudScore < 0.6;
 
-  response.status(200).json({
-    approved,
-    fraud_score: fraudScore
-  });
+    response.status(200).json({
+      approved,
+      fraud_score: fraudScore
+    });
+  } catch (error) {
+    response.status(500).json({
+      approved: false,
+      fraud_score: 0
+    });
+  }
 });
 
 module.exports = { fraudScoreRouter };

@@ -10,6 +10,8 @@ services:
       - "3000"
     cpus: "0.4"
     mem_limit: "150m"
+    volumes:
+      - ./data/lancedb:/app/data/lancedb
     healthcheck:
       test:
         [
@@ -34,6 +36,8 @@ services:
       - "3000"
     cpus: "0.4"
     mem_limit: "150m"
+    volumes:
+      - ./data/lancedb:/app/data/lancedb
     healthcheck:
       test:
         [

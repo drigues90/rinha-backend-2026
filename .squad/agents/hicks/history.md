@@ -14,7 +14,9 @@
 - Exposing an instance identifier in `/health` makes LB validation objective without extra observability tooling.
 - Kept runtime minimal: single app image reused by both API services, static Nginx config mounted read-only.
 - Updated local Compose limits to approximate a shared 1 CPU / 350MB cap across all services, since Compose lacks a true global limit.
+- Alpine base images are unreliable for lancedb native dependencies; Debian slim avoids npm ci build failures.
 
 ## Cross-Agent Updates
 
 - **2026-05-14T00:00:00.000+00:00 (Scribe):** Docker LB baseline decision merged into canonical `.squad/decisions.md`; inbox processed and cleared for Hicks item.
+- **2026-05-18T00:00:00.000+00:00 (Scribe):** Docker base image decision merged into `.squad/decisions.md` after clearing the decision inbox.

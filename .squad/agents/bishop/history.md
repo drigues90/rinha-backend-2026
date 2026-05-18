@@ -17,3 +17,8 @@
 - **2026-05-14:** Applied concrete normalization constants for the fraud-score feature vector limits.
 - **2026-05-14:** Wired `/fraud-score` to load example reference vectors, run top-5 nearest neighbors, and score approval from fraud label ratios.
 - **2026-05-14:** Reordered the fraud feature vector to the specified formula, including UTC Monday-based day-of-week mapping and last-transaction fallbacks.
+- **2026-05-18:** Added Docker build tooling to allow native dependency fallbacks during `npm ci --omit=dev` when prebuilt binaries are missing.
+
+## Cross-Agent Updates
+
+- **2026-05-18T00:00:00.000+00:00 (Scribe):** Docker build tooling decision merged into `.squad/decisions.md` after clearing the decision inbox.

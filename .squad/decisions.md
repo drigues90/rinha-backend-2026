@@ -37,6 +37,16 @@
 **What:** Added API healthchecks and `depends_on` health conditions to gate `nginx` startup, introduced upstream fail parameters (`max_fails`/`fail_timeout`) in Nginx, and updated docs to validate distribution over time instead of strict alternation.
 **Why:** Prevent transient startup `502` behavior and align validation guidance with real round-robin behavior.
 
+### 2026-05-18T00:00:00.000+00:00: Switch Docker base image to Debian slim
+**By:** Hicks
+**What:** Move the app image from `node:20-alpine` to `node:20-bookworm-slim` to avoid npm ci failures for native dependencies.
+**Why:** The lancedb native module does not reliably install on Alpine (musl), causing build failures; Debian slim provides glibc-compatible binaries.
+
+### 2026-05-18T00:00:00.000+00:00: Add build tools for npm ci native fallback
+**By:** Bishop
+**What:** Install `python3`, `make`, and `g++` during the Docker build so `npm ci --omit=dev` can compile native modules when prebuilt binaries are unavailable, then remove them after install.
+**Why:** Prevents Docker build failures triggered by native dependencies (ex: `@lancedb/lancedb`) that may fall back to source builds on slim images.
+
 ## Governance
 
 - All meaningful changes require team consensus
